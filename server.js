@@ -17,8 +17,15 @@ const app = express();
 const JWT_SECRET = process.env.JWT_SECRET;
 
 app.use(cors({
+  origin: function (origin, callback) {
+    const allowedOrigins = ['http://localhost:5500', 'http://127.0.0.1:5500'];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  origin: ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -32,6 +39,26 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch(err => console.error(err));
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+app.options('*', cors());
+
+// Handle preflight requests manually for login/signup
+app.options('/login', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5500');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.sendStatus(204);
+});
+
+app.options('/signup', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5500');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.sendStatus(204);
+});
+
 // Signup route
 app.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
@@ -48,12 +75,14 @@ app.post('/signup', async (req, res) => {
   await user.save();
 
   const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5500');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   res.cookie('token', token, {
     httpOnly: true,
     secure: false,
-    maxAge: 3600000, // 1 hour
     sameSite: 'lax',
+    maxAge: 3600000, // 1 hour
   });
 
   res.json({ name: user.name, email: user.email });
@@ -75,10 +104,13 @@ app.post('/login', async (req, res) => {
 
   const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
 
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5500');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
     // Send JWT token as HttpOnly cookie
   res.cookie('token', token, {
     httpOnly: true,
-    secure: isProduction,      // cookie sent only over HTTPS in production
+    secure: false,      // cookie sent only over HTTPS in production
     sameSite: 'lax',
     maxAge: 3600000,           // 1 hour
   });

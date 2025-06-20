@@ -3,7 +3,6 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/Users');
 const authMiddleware = require('../middleware/auth');
-
 const router = express.Router();
 
 // GET /api/user/profile - Get logged-in user info (name, email)
@@ -19,19 +18,21 @@ router.get('/profile', authMiddleware, async (req, res) => {
 });
 
 // POST /api/user/change-password - Change password
+
 router.post('/change-password', authMiddleware, async (req, res) => {
   const { password } = req.body;
 
-  if (!password || password.length < 6) {
-    return res.status(400).json({ message: 'Password must be at least 6 characters' });
+  if (!password || password.length < 8) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters.' });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     await User.findByIdAndUpdate(req.userId, { passwordHash: hashedPassword });
-    res.json({ message: 'Password updated successfully' });
+
+    res.status(200).json({ message: 'Password changed successfully' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Failed to change password' });
   }
 });
 
