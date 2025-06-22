@@ -8,7 +8,12 @@ const listSchema = new mongoose.Schema({
   maxCost: Number,
   servingSize: Number,
   duration: Number,
-}, { timestamps: true });
 
+  // ✅ This was previously outside — now it's correctly inside the schema
+  generatedData: {
+    type: Object,
+    required: false,
+  },
+}, { timestamps: true });
 
 module.exports = mongoose.model('List', listSchema);

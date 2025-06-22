@@ -3,13 +3,66 @@ const express = require('express');
 const router = express.Router();
 const List = require('../models/Lists');
 const authMiddleware = require('../middleware/auth');
-// const { Configuration, OpenAIApi } = require('openai');
-// const groceryPrompt = require('../services/groceryPrompt');
 
-// const configuration = new Configuration({
-//   apiKey: process.env.OPENAI_API_KEY,
-// });
-// const openai = new OpenAIApi(configuration);
+// At top
+const { OpenAI } = require('openai');
+const groceryPrompt = require('../services/groceryPrompt');
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+router.post('/generate', authMiddleware, async (req, res) => {
+  const { listName, dietType, allergies, maxCost, servingSize, duration, createdAt } = req.body;
+
+  try {
+    // 1. Build the full prompt string
+    const systemPrompt = groceryPrompt.description;
+    const userPrompt = `
+      Please generate a categorized grocery list and 2–10 recipes based on:
+      - Diet type: ${dietType}
+      - Dietary restrictions: ${allergies.join(', ') || 'None'}
+      - Max budget: $${maxCost}
+      - Serving size: ${servingSize}
+      - Duration: ${duration} days
+
+      Follow the structure and rules described earlier.
+    `;
+
+    // 2. Call OpenAI
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7
+    });
+
+    // 3. Parse AI response
+    const content = aiResponse.choices[0].message.content.trim();
+    const parsed = JSON.parse(content); // Assume the output is JSON-formatted JS object
+
+    // 4. Save to MongoDB
+    const newList = new List({
+      userId: req.userId,
+      listName,
+      dietType,
+      allergies,
+      maxCost,
+      servingSize,
+      duration,
+      createdAt: createdAt ? new Date(createdAt) : new Date(),
+      generatedData: parsed // <-- you must add this field to your List model
+    });
+
+    const savedList = await newList.save();
+    res.status(201).json(savedList);
+
+  } catch (err) {
+    console.error('Error generating list:', err);
+    res.status(500).json({ message: 'Failed to generate list' });
+  }
+});
+
 
 // POST /api/lists - create a new list for logged-in user
 router.post('/lists', authMiddleware, async (req, res) => {

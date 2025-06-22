@@ -76,6 +76,7 @@ app.post('/signup', async (req, res) => {
 
 // Login route
 app.post('/login', async (req, res) => {
+    console.log('Login request body:', req.body);
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ message: 'Please fill all fields.' });
@@ -110,7 +111,7 @@ app.post('/logout', (req, res) => {
 // Use your lists routes under /api prefix
 app.use('/api/user', userRoutes);
 
-app.use('/api', listRoutes);
+app.use('/api/lists', listRoutes);
 
 const port = 3000;
 app.listen(port, () => {
