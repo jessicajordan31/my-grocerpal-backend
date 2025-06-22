@@ -16,12 +16,19 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET;
 
+app.use((req, res, next) => {
+  console.log('Request Origin:', req.headers.origin);
+  next();
+});
+
+const allowedOrigins = ['http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000', 'http://127.0.0.1:5501','http://localhost:5501'];
+
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = ['http://localhost:5500', 'http://127.0.0.1:5500'];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.error('CORS Rejected Origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -40,25 +47,6 @@ mongoose.connect(process.env.MONGODB_URI)
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-app.options('*', cors());
-
-// Handle preflight requests manually for login/signup
-app.options('/login', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5500');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
-  res.sendStatus(204);
-});
-
-app.options('/signup', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5500');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
-  res.sendStatus(204);
-});
-
 // Signup route
 app.post('/signup', async (req, res) => {
   const { name, email, password } = req.body;
@@ -75,8 +63,6 @@ app.post('/signup', async (req, res) => {
   await user.save();
 
   const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5500');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   res.cookie('token', token, {
     httpOnly: true,
@@ -103,9 +89,6 @@ app.post('/login', async (req, res) => {
     return res.status(400).json({ message: 'Invalid email or password.' });
 
   const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
-
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5500');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
     // Send JWT token as HttpOnly cookie
   res.cookie('token', token, {

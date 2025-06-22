@@ -3,6 +3,13 @@ const express = require('express');
 const router = express.Router();
 const List = require('../models/Lists');
 const authMiddleware = require('../middleware/auth');
+// const { Configuration, OpenAIApi } = require('openai');
+// const groceryPrompt = require('../services/groceryPrompt');
+
+// const configuration = new Configuration({
+//   apiKey: process.env.OPENAI_API_KEY,
+// });
+// const openai = new OpenAIApi(configuration);
 
 // POST /api/lists - create a new list for logged-in user
 router.post('/lists', authMiddleware, async (req, res) => {
