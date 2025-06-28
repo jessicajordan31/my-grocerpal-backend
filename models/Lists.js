@@ -9,7 +9,6 @@ const listSchema = new mongoose.Schema({
   servingSize: Number,
   duration: Number,
 
-  // ✅ This was previously outside — now it's correctly inside the schema
   generatedData: {
     type: Object,
     required: false,

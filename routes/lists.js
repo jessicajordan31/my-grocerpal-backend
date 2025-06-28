@@ -1,4 +1,3 @@
-// routes/lists.js
 const express = require('express');
 const router = express.Router();
 const List = require('../models/Lists');
@@ -41,6 +40,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
     const content = aiResponse.choices[0].message.content.trim();
     const parsed = JSON.parse(content); // Assume the output is JSON-formatted JS object
 
+ 
     // 4. Save to MongoDB
     const newList = new List({
       userId: req.userId,
@@ -51,7 +51,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
       servingSize,
       duration,
       createdAt: createdAt ? new Date(createdAt) : new Date(),
-      generatedData: parsed // <-- you must add this field to your List model
+      generatedData: parsed 
     });
 
     const savedList = await newList.save();
@@ -139,7 +139,5 @@ router.put('/lists/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Server error.' });
   }
 });
-
-
 
 module.exports = router;
