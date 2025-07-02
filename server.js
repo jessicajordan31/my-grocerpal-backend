@@ -16,6 +16,9 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use((req, res, next) => {
   console.log('Request Origin:', req.headers.origin);
   next();

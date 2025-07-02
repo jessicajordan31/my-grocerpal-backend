@@ -1,6 +1,7 @@
 const groceryPrompt = {
   description:
-    "Generate a categorized grocery list and 2–10 recipes based on user-defined dietary needs, cost, serving size, and duration. The output is structured for easy frontend rendering.",
+    "Generate a categorized grocery list and 2–10 recipes based on user-defined dietary needs, cost, serving size, and duration. The output should be for frontend rendering.",
+    
 
   inputParameters: {
     dietType: "DIET_TYPE",
@@ -13,7 +14,7 @@ const groceryPrompt = {
   requirements: {
     groceryList: {
       objective:
-        "Generate a grocery list that supports the user's dietary preferences for the specified number of people and days, while staying within budget.",
+        "Generate a grocery list that supports the user's dietary preferences for the specified number of people and days, while staying within budget. Output is only the JSON object for frontend rendering. Do NOT include \`\`\`, ###, or any other markdown. Do NOT include trailing commas. The object must be parsable by \`JSON.parse()\.",
       priorities: [
         "Accessibility (widely available ingredients)",
         "Health and nutrition",

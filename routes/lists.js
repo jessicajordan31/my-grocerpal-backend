@@ -2,12 +2,33 @@ const express = require('express');
 const router = express.Router();
 const List = require('../models/Lists');
 const authMiddleware = require('../middleware/auth');
-
-// At top
 const { OpenAI } = require('openai');
 const groceryPrompt = require('../services/groceryPrompt');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Helper: Retry with exponential backoff for 429 errors
+async function callWithRateLimitHandling(apiFunc, args, maxRetries = 5) {
+  let delayMs = 1100; // Start with a 1.1 second delay by default
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      await delay(delayMs); // Add this delay before each attempt
+      return await apiFunc(...args);
+    } catch (err) {
+      if (err.status === 429 && attempt < maxRetries - 1) {
+        // Exponential backoff: double the wait each retry
+        delayMs *= 2;
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw new Error('Exceeded retry limit for OpenAI rate limiting.');
+}
 
 router.post('/generate', authMiddleware, async (req, res) => {
   const { listName, dietType, allergies, maxCost, servingSize, duration, createdAt } = req.body;
@@ -16,25 +37,53 @@ router.post('/generate', authMiddleware, async (req, res) => {
     // 1. Build the full prompt string
     const systemPrompt = groceryPrompt.description;
     const userPrompt = `
-      Please generate a categorized grocery list and 2–10 recipes based on:
-      - Diet type: ${dietType}
-      - Dietary restrictions: ${allergies.join(', ') || 'None'}
-      - Max budget: $${maxCost}
-      - Serving size: ${servingSize}
-      - Duration: ${duration} days
+        You are an API generator. Respond ONLY with raw JSON — NO markdown, NO explanations, NO headings, and NO extra text.
 
-      Follow the structure and rules described earlier.
-    `;
+        Your output must exactly match this structure:
+
+        {
+          "Produce": [{ "Item": "string", "Quantity": number, "Price": number }],
+          "Dairy": [],
+          "MeatProtein": [],
+          "FreezerGoods": [],
+          "CannedGoods": [],
+          "OtherGroceryItems": [],
+          "recipes": [
+            {
+              "title": "string",
+              "description": "string",
+              "ingredients": [{ "item": "string", "quantity": "string" }],
+              "instructions": ["string"],
+              "prepTimeMinutes": number,
+              "cookTimeMinutes": number,
+              "servings": number
+            }
+          ]
+        }
+
+        Using:
+        - Diet type: ${dietType}
+        - Allergies: ${allergies.join(', ') || 'None'}
+        - Max cost: $${maxCost}
+        - Serving size: ${servingSize}
+        - Duration: ${duration} days
+
+        ⚠️ Output only the JSON object. Do NOT include \`\`\`, ###, or any other markdown. Do NOT include trailing commas. The object must be parsable by \`JSON.parse()\`.
+        `;
+
 
     // 2. Call OpenAI
-    const aiResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.7
-    });
+    const aiResponse = await callWithRateLimitHandling(
+      (...apiArgs) => openai.chat.completions.create(...apiArgs),
+      [{
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.7
+      }]
+    );
 
     // 3. Parse AI response
     const content = aiResponse.choices[0].message.content.trim();
@@ -111,7 +160,7 @@ router.get('/lists', authMiddleware, async (req, res) => {
 
 router.get('/lists/:id', authMiddleware, async (req, res) => {
   try {
-    const list = await List.findOne({ _id: req.params.id, userId: req.userId });
+    const list = await List.findOne({ _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) });
     if (!list) return res.status(404).json({ message: 'List not found' });
     res.json(list);
   } catch (err) {
@@ -126,7 +175,7 @@ router.put('/lists/:id', authMiddleware, async (req, res) => {
     if (!listName) return res.status(400).json({ message: 'List name is required.' });
 
     const list = await List.findOneAndUpdate(
-      { _id: req.params.id, userId: req.userId },
+      { _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) },
       { listName },
       { new: true }
     );
