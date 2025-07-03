@@ -24,7 +24,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const allowedOrigins = ['http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000', 'http://127.0.0.1:5501','http://localhost:5501'];
+const allowedOrigins = ['http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000', 'http://127.0.0.1:5501','http://localhost:5501', 'http://localhost:8080', 'http://127.0.0.1:8080'];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -42,6 +42,11 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Test route to debug 404 issues
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working!', timestamp: new Date() });
+});
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -116,7 +121,7 @@ app.use('/api/user', userRoutes);
 
 app.use('/api/lists', listRoutes);
 
-const port = 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

@@ -5,6 +5,9 @@ function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
 
+  console.log('Auth Header:', authHeader);
+  console.log('Extracted Token:', token ? 'Present' : 'Missing');
+
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized: No token provided' });
   }

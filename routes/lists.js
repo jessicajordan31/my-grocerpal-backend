@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const List = require('../models/Lists');
 const authMiddleware = require('../middleware/auth');
@@ -113,8 +114,8 @@ router.post('/generate', authMiddleware, async (req, res) => {
 });
 
 
-// POST /api/lists - create a new list for logged-in user
-router.post('/lists', authMiddleware, async (req, res) => {
+// POST / - create a new list for logged-in user
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { listName, dietType, allergies, maxCost, servingSize, duration, createdAt } = req.body;
 
@@ -137,7 +138,7 @@ router.post('/lists', authMiddleware, async (req, res) => {
   }
 });
 
-router.get('/lists', authMiddleware, async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const userLists = await List.find({ userId: req.userId }).sort({ createdAt: -1 });
     res.json(userLists);
@@ -147,18 +148,8 @@ router.get('/lists', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/lists - get all lists for logged-in user
-router.get('/lists', authMiddleware, async (req, res) => {
-  try {
-    const lists = await List.find({ userId: req.userId }).sort({ createdAt: -1 });
-    res.json(lists);
-  } catch (error) {
-    console.error('Error fetching lists:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-router.get('/lists/:id', authMiddleware, async (req, res) => {
+// GET /:id - get a specific list by ID
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const list = await List.findOne({ _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) });
     if (!list) return res.status(404).json({ message: 'List not found' });
@@ -169,7 +160,7 @@ router.get('/lists/:id', authMiddleware, async (req, res) => {
   }
 });
 
-router.put('/lists/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { listName } = req.body;
     if (!listName) return res.status(400).json({ message: 'List name is required.' });
