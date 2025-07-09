@@ -11,16 +11,15 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Helper: Retry with exponential backoff for 429 errors
+// helper: rate limiting for 429 errors
 async function callWithRateLimitHandling(apiFunc, args, maxRetries = 5) {
-  let delayMs = 1100; // Start with a 1.1 second delay by default
+  let delayMs = 1100; // 1.1 second delay by default
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      await delay(delayMs); // Add this delay before each attempt
+      await delay(delayMs);
       return await apiFunc(...args);
     } catch (err) {
       if (err.status === 429 && attempt < maxRetries - 1) {
-        // Exponential backoff: double the wait each retry
         delayMs *= 2;
       } else {
         throw err;
@@ -34,7 +33,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
   const { listName, dietType, allergies, maxCost, servingSize, duration, createdAt } = req.body;
 
   try {
-    // 1. Build the full prompt string
+    // 1. Build prompt string
     const systemPrompt = groceryPrompt.description;
     const userPrompt = `
         You are an API generator. Respond ONLY with raw JSON — NO markdown, NO explanations, NO headings, and NO extra text.
@@ -87,7 +86,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
 
     // 3. Parse AI response
     const content = aiResponse.choices[0].message.content.trim();
-    const parsed = JSON.parse(content); // Assume the output is JSON-formatted JS object
+    const parsed = JSON.parse(content);
 
  
     // 4. Save to MongoDB
