@@ -165,6 +165,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const { listName } = req.body;
     if (!listName) return res.status(400).json({ message: 'List name is required.' });
 
+    console.log('PUT /:id body:', req.body);
+    console.log('PUT /:id user:', req.userId);
+
     const list = await List.findOneAndUpdate(
       { _id: req.params.id, userId: new mongoose.Types.ObjectId(req.userId) },
       { listName },
